@@ -61,6 +61,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
             //this won't work if verticesCount gets too large; may need another naming convention
             ss << i;
             std::string nodeName = ss.str();
+            ss.clear();
             std::cout << "Adding node: " << nodeName << std::endl;
             m.nodesNames.push_back(std::string(nodeName));
         }
