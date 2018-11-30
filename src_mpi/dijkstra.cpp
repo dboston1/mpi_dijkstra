@@ -15,6 +15,17 @@ static const auto INF = std::numeric_limits<int>::max();
 const int mpiRootId = 0;
 
 
+
+//Note: we'll need to check where weights.size() etc is used; I believe this changes, as weights was previously an adjacency matrix, so weights.size() gives size of row (correct??), which will be twice the number of vertices we have. So, we may need to modify it to return half weights.size()? etc etc.
+
+//check other functions being used by weights
+
+
+//Note: we could change numVertices = sqrt the number it reads in from the file; this works because the file will always be square, i.e. 10x10 = 100 vertices, so we can get actual number of vertices not the number of possible edges.
+
+
+
+
 //this function takes nodesCount, mpiNodesCount (num of processors - host), and mpiNodeId
 // it essentially figures out which processor calculated the distance from "fromNode" to "toNode"
 std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, int mpiNodeId) {
@@ -38,7 +49,12 @@ std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, in
 
 //only the "main" processer (id == 0) uses this function
 void dijkstra(const Map& m, const std::string& initialNodeName, const std::string& goalNodeName, const int mpiNodesCount) {
+    
+    //here, we will have to make sure this works with whatever adaptaption we go with...
+        // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     const auto& weights = m.getWeights();
+        // -----------------------------------------------------------------------------------------------------------------------------------------------------//
+    
     const auto& nodesNames = m.getNodesNames();
     auto nodesCount = nodesNames.size();
 
@@ -61,7 +77,11 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
     
     //this relies on adjacency matrix format; could we do the same with an adjacency list??
+    
+    //Do the same as with the duplicate function above!
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     auto isNeighbour = [&] (auto currentNode, auto node) { return weights[currentNode][node] != -1; };
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
 
     // just casts the name of the initialNode to an int
     auto initialNode = static_cast<int>(indexOf(initialNodeName));
@@ -85,10 +105,11 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     int data[3] = {nodesCount, initialNode, goalNode};
     MPI_Bcast(&data, 3, MPI_INT, mpiRootId, MPI_COMM_WORLD);
 
-    //can we send this as chars instead of ints?? since max value is 10??
+    //This is sending a pointer to each row in the adjacency matrix...
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     for(auto i=0u; i<nodesCount; ++i)
         MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
-
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     // set dist from initialNode to initialNode to 0
     distances[initialNode] = 0;
     
@@ -190,19 +211,28 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
 
     std::cout << "mpiID=" << mpiNodeId << " bcast recv nodesCount=" << nodesCount << " initialNode=" << initialNode << " goalNode=" << goalNode << std::endl;
 
+        // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     std::vector<std::vector<int>> weights(nodesCount);
+        // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     std::vector<int> distances(nodesCount, INF);
     std::vector<int> prevNodes(nodesCount, INF);
     std::set<int> visited;
 
     auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
-    auto isNeighbour = [&] (auto currentNode, auto node) { return weights[currentNode][node] != -1; };
     
-    //populate weights from host broadcast (only gets the first column in this iteration)
+    // We want to modify this function to instead return the vertex weight of the nodes reachable from currentNode (may need to make it into a proper function)
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
+    auto isNeighbour = [&] (auto currentNode, auto node) { return weights[currentNode][node] != -1; };
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
+    //populate weights from host broadcast 
+    
+    //note; this gets the entire table...
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     for(auto i=0u; i<nodesCount; ++i) {
         weights[i].resize(nodesCount);
         MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
     }
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     // nodeRanges is the nodes this processor will be checking; uses function at top of file
     const auto nodeRanges = getMpiWorkerNodeRanges(nodesCount, mpiNodesCount, mpiNodeId);
     const auto fromNode = nodeRanges.first;
@@ -230,9 +260,12 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
             }
 
             if (isNeighbour(currentNode, node)) {
+                
+                //here is where weights is actually used:
+                // -----------------------------------------------------------------------------------------------------------------------------------------------------//
                 auto nodeDistance = weights[currentNode][node];
                 auto totalCostToNode = distances[currentNode] + nodeDistance;
-
+                // -----------------------------------------------------------------------------------------------------------------------------------------------------//
                 LOG("Node " << node << " is neighbour of " << currentNode << " (distance: " << nodeDistance << ", totalCostToNode: " << totalCostToNode << ")");
                 if (totalCostToNode < distances[node]) {
                     distances[node] = totalCostToNode;

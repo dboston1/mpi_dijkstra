@@ -9,13 +9,16 @@
 #include "map.h"
 #include "debug.h"
 
+//added for sqrt of vertices count calculation
+#include <math.h>
+
 
 //inititalizes weights to be the correct size; currently creates adjacency matrix. 
 //we can check into adjacency list, or "sparse matrix" representations?? Python has this option, greatly reduces matrix sizes.....
 
-Map::Map(int verticesCount) : weights(verticesCount) {
-    for(int i=0; i<verticesCount; ++i) {
-        weights[i].resize(verticesCount);
+Map::Map(int dim) : weights(dim) {
+    for(int i=0; i<dim; ++i) {
+        weights[i].resize(dim);
     }
 }
 
@@ -26,38 +29,31 @@ Map Map::fromFile(const std::string& str, const char delimiter) {
     return fromFile(std::ifstream(str.c_str()), delimiter);
 }
 
+
+//This should correctly read in new format now !
 Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
     std::string header;
 
     if (std::getline(istream, header, ':') && header == "vertices" && std::getline(istream, header)) {
         int verticesCount = std::stoi(header);
-        
+        int dim = std::sqrt(verticesCount);
         //calls first constructor, so now weights will have correct sizes
-        Map m(verticesCount);        
+        Map m(dim);        
 
-        for(auto i=0; i<verticesCount; ++i) {
+        for(auto i=0; i<dim; ++i) {
             std::string line;
             std::getline(istream, line); 
 
             std::stringstream linestream(line);
-            for(auto j=0; j<verticesCount; ++j) {
+            for(auto j=0; j<dim; ++j) {
                 std::string numstr;
                 std::getline(linestream, numstr, delimiter);
-                
-                // the `i` node has no edge to `j`
-                //note; NO_EDGE is set to -1 in header file
-                if (numstr.find("-") != std::string::npos)
-                    m.weights[i][j] = NO_EDGE;
-                    
-                else
-                    m.weights[i][j] = std::stoi(numstr);
+                m.weights[i][j] = std::stoi(numstr);
             }
         }
         std::stringstream ss;
 
         for(auto i=0; i<verticesCount; ++i) {
-            
-            
             //this won't work if verticesCount gets too large; may need another naming convention
             ss << i;
             std::string nodeName = ss.str();
@@ -76,11 +72,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
 void Map::printWeights() const {
     for(auto i=0u; i<getSize(); ++i) {
         for(auto j=0u; j<getSize(); ++j)
-            if (weights[i][j] != -1)
-                std::cout << std::setw(4) << weights[i][j] << " ";
-            else
-                std::cout << std::setw(4) << "-" << " ";
-
+            std::cout << std::setw(4) << weights[i][j] << " ";
         std::cout << std::endl;
     }
 }
