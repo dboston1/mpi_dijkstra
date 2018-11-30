@@ -53,14 +53,18 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
                     m.weights[i][j] = std::stoi(numstr);
             }
         }
+        std::stringstream ss;
 
         for(auto i=0; i<verticesCount; ++i) {
-            std::string nodename("");
+            
+            
             //this won't work if verticesCount gets too large; may need another naming convention
-            nodeName += std::string(i);
+            ss << i;
+            std::string nodename = ss.str();
             std::cout << "Adding node: " << nodeName << std::endl;
             m.nodesNames.push_back(std::string(nodeName));
         }
+        
 
         return m;
     }
