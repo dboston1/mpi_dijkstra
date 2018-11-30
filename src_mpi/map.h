@@ -8,6 +8,7 @@ private:
     Map(int verticesCount);
 
     std::vector<std::string> nodesNames;
+    //could we make this of type char?? just to reduce mem. footprint even more??
     std::vector<std::vector<int>> weights;
 
 public:
