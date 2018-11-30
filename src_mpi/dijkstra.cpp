@@ -56,7 +56,8 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     // [&] creates lambda function; i.e. capture all variables by reference within scope
     // so, this is essentially saying for nodename (by reference), search for it in nodesNames and return appropriate index of it etc etc
     // note this is very ineffiecient; is there a better way to get an index for a particular node??? could just name the nodes by their index....
-    auto indexOf = [&] (auto nodeName) { return std::find(nodesNames.begin(), nodesNames.end(), nodeName) - nodesNames.begin(); };
+    auto indexOf = [&] (auto nodeName) { return std::stoi(nodeName); };
+        
     auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
     
     //this relies on adjacency matrix format; could we do the same with an adjacency list??
