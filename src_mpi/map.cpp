@@ -55,9 +55,9 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
         }
 
         for(auto i=0; i<verticesCount; ++i) {
-            char nodeName[2] = {0};
+            std::string nodename("");
             //this won't work if verticesCount gets too large; may need another naming convention
-            nodeName[0] = (char) ( (int) i );
+            nodeName += std::string(i);
             std::cout << "Adding node: " << nodeName << std::endl;
             m.nodesNames.push_back(std::string(nodeName));
         }
