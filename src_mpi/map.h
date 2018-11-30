@@ -16,8 +16,8 @@ private:
         // -----------------------------------------------------------------------------------------------------------------------------------------------------//
 
 public:
-    static Map fromFile(const std::string& str, const char delimiter=',');
-    static Map fromFile(std::ifstream&& istream, const char delimiter=',');
+    static Map fromFile(const std::string& str, const char delimiter=' ');
+    static Map fromFile(std::ifstream&& istream, const char delimiter=' ');
 
     decltype(weights.size()) getSize() const { return weights.size(); }
     const decltype(weights) getWeights() const { return weights; }
