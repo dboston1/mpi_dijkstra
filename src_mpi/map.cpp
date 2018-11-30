@@ -36,7 +36,9 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
 
     if (std::getline(istream, header, ':') && header == "vertices" && std::getline(istream, header)) {
         int verticesCount = std::stoi(header);
+        std::cout << "Vertices count: " << verticesCount << std::endl;
         int dim = std::sqrt(verticesCount);
+        std::cout << "Dim: " << dim << std::endl;
         //calls first constructor, so now weights will have correct sizes
         Map m(dim);        
 
@@ -48,6 +50,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
             for(auto j=0; j<dim; ++j) {
                 std::string numstr;
                 std::getline(linestream, numstr, delimiter);
+                std::cout << "nextNumber: " << numstr << std::endl;
                 m.weights[i][j] = std::stoi(numstr);
             }
         }
