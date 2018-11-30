@@ -14,6 +14,9 @@
 static const auto INF = std::numeric_limits<int>::max();
 const int mpiRootId = 0;
 
+
+//this function takes nodesCount, mpiNodesCount (num of processors - host), and mpiNodeId
+// it essentially figures out which processor calculated the distance from "fromNode" to "toNode"
 std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, int mpiNodeId) {
     mpiNodesCount -= 1; // counting only worker nodes
     auto fromNode = (nodesCount / mpiNodesCount) * (mpiNodeId - 1);
@@ -33,6 +36,7 @@ std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, in
     return std::pair<int, int>(fromNode, toNode);
 }
 
+//only the "main" processer (id == 0) uses this function
 void dijkstra(const Map& m, const std::string& initialNodeName, const std::string& goalNodeName, const int mpiNodesCount) {
     const auto& weights = m.getWeights();
     const auto& nodesNames = m.getNodesNames();
@@ -42,38 +46,63 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     std::vector<int> prevNodes(nodesCount);
 
     std::set<int> visited;
+    
+    // 0u is an unsigned short; has range [0, 65k] so should be fine for nodesCount <= 65k
     for(auto node=0u; node<nodesCount; ++node) {
         distances[node] = INF;
         prevNodes[node] = INF;
     }
 
+    // [&] creates lambda function; i.e. capture all variables by reference within scope
+    // so, this is essentially saying for nodename (by reference), search for it in nodesNames and return appropriate index of it etc etc
+    // note this is very ineffiecient; is there a better way to get an index for a particular node??? could just name the nodes by their index....
     auto indexOf = [&] (auto nodeName) { return std::find(nodesNames.begin(), nodesNames.end(), nodeName) - nodesNames.begin(); };
     auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
+    
+    //this relies on adjacency matrix format; could we do the same with an adjacency list??
     auto isNeighbour = [&] (auto currentNode, auto node) { return weights[currentNode][node] != -1; };
 
+    // just casts the name of the initialNode to an int
     auto initialNode = static_cast<int>(indexOf(initialNodeName));
     auto currentNode = initialNode;
+    
+    // not sure why this is different than above with initialNodeName, since it accomplishes the same thing....
     auto goalNode = indexOf(goalNodeName);
 
     int workerNodes = mpiNodesCount - 1;
+    
+    //note; below does not need to evenly divide
     int nodesStep = nodesCount / workerNodes;
 
+    
+    // so here, we broadcast twice;
+    // first, the nodesCount, initialNode name, and goalNode name (all as ints)
+    // second, the edge weights from the initialNode to every other node (i.e. the first column of the adjacency matrix, since [i][j] is non-negative if 
+    //          the edge (i,j) exists 
+    
     std::cout << "Sending initial data to workers..." << std::endl;
     int data[3] = {nodesCount, initialNode, goalNode};
     MPI_Bcast(&data, 3, MPI_INT, mpiRootId, MPI_COMM_WORLD);
 
+    //can we send this as chars instead of ints?? since max value is 10??
     for(auto i=0u; i<nodesCount; ++i)
         MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
 
+    // set dist from initialNode to initialNode to 0
     distances[initialNode] = 0;
-
+    
+    
+    
     while (1) {
         std::cout << "Sending currNode=" << currentNode << " distance=" << distances[currentNode] << std::endl;
+        // send current node (starting with initialNode) and its value in distances to all other processors
         int data[2] = {currentNode, distances[currentNode]};
         MPI_Bcast(&data, 2, MPI_INT, mpiRootId, MPI_COMM_WORLD);
 
         // receive distances calculated by workers
+        // for each processor (besides host):
         for(auto mpiNodeId=1; mpiNodeId<mpiNodesCount; ++mpiNodeId) {
+            // see function at top of file for getMPIWorkerNodeRanges()
             const auto nodeRanges = getMpiWorkerNodeRanges(nodesCount, mpiNodesCount, mpiNodeId);
             const auto fromNode = nodeRanges.first;
             const auto toNode = nodeRanges.second;
@@ -85,11 +114,14 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
         if (currentNode == goalNode) {
             std::cout << "Goal node found" << std::endl;
             for(auto mpiNodeId=1; mpiNodeId<mpiNodesCount; ++mpiNodeId) {
+                // see function at top of file for getMPIWorkerNodeRanges()
                 const auto nodeRanges = getMpiWorkerNodeRanges(nodesCount, mpiNodesCount, mpiNodeId);
                 const auto fromNode = nodeRanges.first;
                 const auto toNode = nodeRanges.second;
                 MPI_Recv(&prevNodes[fromNode], toNode - fromNode + 1, MPI_INT, mpiNodeId, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
+            
+            //LOGv = cout if compiled with -DDEBUG flag in makefile
             LOGv(distances);
             LOGv(prevNodes);
 
@@ -113,13 +145,18 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
 
             break;
         }
-
+        
+        //otherwise, goal has not been found yet:
         LOG("Visited " << currentNode);
+        // mark current node as visited
         visited.insert(currentNode);
 
         auto minCost = std::numeric_limits<int>::max(); 
         auto nextNode = -1;
-
+        
+        
+        //this part is the "greedy" part of algorithm: find next unvisited node with minimal path from source to it and set it 
+        // as next node. If none exists, it will remain -1 at end, at which point program will exit after printing "Path not Found"
         for(auto node=0u; node<nodesCount; ++node) {
             auto totalCost = distances[node];
 
@@ -140,8 +177,10 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
 }
 
 
+// all processors except main use this function (only)
 void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
     int data[3];
+    // recieve nodesCount, intialNode, and goalNode from host processor
     MPI_Bcast(&data, 3, MPI_INT, 0, MPI_COMM_WORLD);
 
     int nodesCount = data[0];
@@ -157,12 +196,13 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
 
     auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
     auto isNeighbour = [&] (auto currentNode, auto node) { return weights[currentNode][node] != -1; };
-
+    
+    //populate weights from host broadcast (only gets the first column in this iteration)
     for(auto i=0u; i<nodesCount; ++i) {
         weights[i].resize(nodesCount);
         MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
     }
-
+    // nodeRanges is the nodes this processor will be checking; uses function at top of file
     const auto nodeRanges = getMpiWorkerNodeRanges(nodesCount, mpiNodesCount, mpiNodeId);
     const auto fromNode = nodeRanges.first;
     const auto toNode = nodeRanges.second;
@@ -171,6 +211,7 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
     // real work
     while (1) {
         std::cout << "~~~~" << std::endl;
+        // get currentNode, and path distance from initialNode to currentNode (guaranteed to be shortest path seen so far)
         MPI_Bcast(&data, 2, MPI_INT, mpiRootId, MPI_COMM_WORLD);
 
         int currentNode = data[0];
@@ -201,6 +242,7 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
         }
 
         visited.insert(currentNode);
+        // send all calculated distances
         MPI_Send(&distances[fromNode], toNode - fromNode + 1, MPI_INT, mpiRootId, 0, MPI_COMM_WORLD);
 
         // goal node found

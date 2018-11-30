@@ -9,12 +9,19 @@
 #include "map.h"
 #include "debug.h"
 
+
+//inititalizes weights to be the correct size; currently creates adjacency matrix. 
+//we can check into adjacency list, or "sparse matrix" representations?? Python has this option, greatly reduces matrix sizes.....
+
 Map::Map(int verticesCount) : weights(verticesCount) {
     for(int i=0; i<verticesCount; ++i) {
         weights[i].resize(verticesCount);
     }
 }
 
+
+//basic constructor (i.e. entry constructor) which calls constructor below
+//note; delimiter is set to be a comma by default
 Map Map::fromFile(const std::string& str, const char delimiter) {
     return fromFile(std::ifstream(str.c_str()), delimiter);
 }
@@ -25,6 +32,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
     if (std::getline(istream, header, ':') && header == "vertices" && std::getline(istream, header)) {
         int verticesCount = std::stoi(header);
         
+        //calls first constructor, so now weights will have correct sizes
         Map m(verticesCount);        
 
         for(auto i=0; i<verticesCount; ++i) {
@@ -37,6 +45,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
                 std::getline(linestream, numstr, delimiter);
                 
                 // the `i` node has no edge to `j`
+                //note; NO_EDGE is set to -1 in header file
                 if (numstr.find("-") != std::string::npos)
                     m.weights[i][j] = NO_EDGE;
                     
@@ -47,6 +56,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
 
         for(auto i=0; i<verticesCount; ++i) {
             char nodeName[2] = {0};
+            //this won't work if verticesCount gets too large; may need another naming convention
             nodeName[0] = (char) ( (int)('A') + i );
             std::cout << "Adding node: " << nodeName << std::endl;
             m.nodesNames.push_back(std::string(nodeName));

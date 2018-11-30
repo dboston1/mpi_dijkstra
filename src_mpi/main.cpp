@@ -5,6 +5,8 @@
 #include "debug.h"
 #include "dijkstra.h"
 
+//note; all LOG(x) calls are only defined if compiled with -DDEBUG flax in makefile
+
 int main(int argc, char* argv[]) {
     if (argc == 1) {
         std::cout << "Usage: " << argv[0] << " <testcase file>" << std::endl;
@@ -27,6 +29,8 @@ int main(int argc, char* argv[]) {
         auto initialNodeName = *n.begin();
         auto goalNodeName = *(n.end()-1);
 
+        //a lot of this should be optimized; printWeights is a O(n^2) function which adds a big constant factor...
+        
         std::cout << "Dijkstra search algorithm" << std::endl;
         std::cout << "Starting at node: " << initialNodeName << std::endl;
         std::cout << "Ending at node: " << goalNodeName << std::endl;
