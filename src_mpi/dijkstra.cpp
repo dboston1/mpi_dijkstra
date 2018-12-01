@@ -165,7 +165,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
             }
 
             LOGv(stack);
-            std::cout << "Total cost: " << distances[goalNode] << std::endl;
+            std::cout << "Maximum Path Sum: " << (9*dim) - distances[goalNode] << std::endl;
             std::cout << "Path: " << nodesNames[currentNode];
 
             for(auto it=stack.rbegin(); it != stack.rend(); ++it) {
