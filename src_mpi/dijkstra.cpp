@@ -322,11 +322,8 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
                 //here is where weights is actually used:
                 int row_index = (int)(node / dim);
                 int col_index = node % dim;
-                auto nodeDistance;
-                if(node == (dim*dim)){
-                    nodeDistance = 0;
-                }
-                else{
+                auto nodeDistance = 0;
+                if(node != (dim*dim)){
                     nodeDistance = weights[row_index][col_index];
                 }
                 
