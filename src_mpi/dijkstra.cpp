@@ -18,17 +18,6 @@ static const auto INF = std::numeric_limits<int>::max();
 const int mpiRootId = 0;
 
 
-
-//Note: we'll need to check where weights.size() etc is used; I believe this changes, as weights was previously an adjacency matrix, so weights.size() gives size of row (correct??), which will be twice the number of vertices we have. So, we may need to modify it to return half weights.size()? etc etc.
-
-//check other functions being used by weights
-
-
-//Note: we could change numVertices = sqrt the number it reads in from the file; this works because the file will always be square, i.e. 10x10 = 100 vertices, so we can get actual number of vertices not the number of possible edges.
-
-
-
-
 //this function takes nodesCount, mpiNodesCount (num of processors - host), and mpiNodeId
 // it essentially figures out which processor calculated the distance from "fromNode" to "toNode"
 std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, int mpiNodeId) {
@@ -50,37 +39,35 @@ std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, in
     return std::pair<int, int>(fromNode, toNode);
 }
     
-
-    //NOTE: this does not currently account for global source / sink nodes !
     
 auto isNeighbour(auto currentNode, auto node, auto dim){
-    //first, find i,j entry of currentNode in weights table
-    int i_curr = (int)(currentNode / dim);
-    int j_curr = currentNode % dim;
-    
-    //same for node:
-    int i_to = (int)(node / dim);
-    int j_to = node % dim;
-    
-    //now, three cases, based on currentNode's position in matrix:
-    // if in top row of matrix, i.e. i_curr == 0:
+    int sourceNode = dim*dim+1;
+    if(currentNode == 0 && node == sourceNode)
+       return false;
+    if(currentNode == 0){
+        return ((node-1) % dim) == 0;
+    }
+    if(node == sourceNode){
+       return (currentNode % dim) == 0;
+    }
+
+    int i_curr = (int)((currentNode-1) / dim);
+    int j_curr = (currentNode-1) % dim;
+    int i_to = (int)((node-1) / dim);
+    int j_to = (node-1) % dim;
+
     if(i_curr == 0){
-        //if next node is in same row or one below:
         if((i_curr == i_to) || (i_curr == (i_to - 1))){
             return(j_curr == (j_to -1));
         }
     }
-    // else if in bottom row of matrix:
     else if(i_curr == (dim -1)){
         if((i_curr == i_to) || (i_curr == (i_to + 1))){
             return(j_curr == (j_to -1));
         }
     }
-    //otherwise generic case:
     else{
-        //first check it moves to right:
         if(j_curr == (j_to - 1)){
-            //check if it moves up, over, or down:
             if((i_curr == i_to) || (i_curr == (i_to - 1)) || (i_curr == (i_to + 1))){
                 return true;
             }
@@ -93,14 +80,11 @@ auto isNeighbour(auto currentNode, auto node, auto dim){
 //only the "main" processer (id == 0) uses this function
 void dijkstra(const Map& m, const std::string& initialNodeName, const std::string& goalNodeName, const int mpiNodesCount) {
     
-    //here, we will have to make sure this works with whatever adaptaption we go with...
-        // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     const auto& weights = m.getWeights();
-        // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     
     const auto& nodesNames = m.getNodesNames();
     auto nodesCount = nodesNames.size();
-    auto dim = std::sqrt(nodesCount);
+    auto dim = std::sqrt(nodesCount-2);
 
     std::vector<int> distances(nodesCount);
     std::vector<int> prevNodes(nodesCount);
@@ -113,24 +97,15 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
         prevNodes[node] = INF;
     }
 
-    // [&] creates lambda function; i.e. capture all variables by reference within scope
-    // so, this is essentially saying for nodename (by reference), search for it in nodesNames and return appropriate index of it etc etc
-    // note this is very ineffiecient; is there a better way to get an index for a particular node??? could just name the nodes by their index....
-    auto indexOf = [&] (auto nodeName) { return std::stoi(nodeName); };
+    auto indexOf = [&] (auto nodeName) { return std::stoi(nodeName)-1; };
         
     auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
 
-
-    // just casts the name of the initialNode to an int
-    auto initialNode = static_cast<int>(indexOf(initialNodeName));
+    auto initialNode = static_cast<int>(0);
     auto currentNode = initialNode;
-    
-    // not sure why this is different than above with initialNodeName, since it accomplishes the same thing....
-    auto goalNode = indexOf(goalNodeName);
+    auto goalNode = static_cast<int>(std::stoi(goalNodeName));
 
     int workerNodes = mpiNodesCount - 1;
-    
-    //note; below does not need to evenly divide
     int nodesStep = nodesCount / workerNodes;
 
     
@@ -144,11 +119,8 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     MPI_Bcast(&data, 3, MPI_INT, mpiRootId, MPI_COMM_WORLD);
 
     //This is sending a pointer to each row in the adjacency matrix...
-    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     for(auto i=0u; i<dim; ++i)
-        MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
-    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
-    // set dist from initialNode to initialNode to 0
+        MPI_Bcast((int*)&weights[i][0], dim, MPI_INT, mpiRootId, MPI_COMM_WORLD);
     distances[initialNode] = 0;
     
     
@@ -181,7 +153,6 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
                 MPI_Recv(&prevNodes[fromNode], toNode - fromNode + 1, MPI_INT, mpiNodeId, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
             
-            //LOGv = cout if compiled with -DDEBUG flag in makefile
             LOGv(distances);
             LOGv(prevNodes);
 
@@ -244,15 +215,13 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
     MPI_Bcast(&data, 3, MPI_INT, 0, MPI_COMM_WORLD);
 
     int nodesCount = data[0];
-    int dim = std::sqrt(nodesCount);
+    int dim = std::sqrt(nodesCount-2);
     int initialNode = data[1];
     int goalNode = data[2];
 
     std::cout << "mpiID=" << mpiNodeId << " bcast recv nodesCount=" << nodesCount << " initialNode=" << initialNode << " goalNode=" << goalNode << std::endl;
 
-        // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     std::vector<std::vector<int>> weights(nodesCount);
-        // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     std::vector<int> distances(nodesCount, INF);
     std::vector<int> prevNodes(nodesCount, INF);
     std::set<int> visited;
@@ -260,14 +229,10 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
     auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
     
     //populate weights from host broadcast 
-    
-    //note; this gets the entire table...
-    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     for(auto i=0u; i<dim; ++i) {
-        weights[i].resize(nodesCount);
-        MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
+        weights[i].resize(dim);
+        MPI_Bcast((int*)&weights[i][0], dim, MPI_INT, mpiRootId, MPI_COMM_WORLD);
     }
-    // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     // nodeRanges is the nodes this processor will be checking; uses function at top of file
     const auto nodeRanges = getMpiWorkerNodeRanges(nodesCount, mpiNodesCount, mpiNodeId);
     const auto fromNode = nodeRanges.first;
@@ -295,11 +260,14 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
             }
 
             if (isNeighbour(currentNode, node, dim)) {
+                int row_index = (int)((node-1) / dim);
+                int col_index = (node-1) % dim;
+                auto nodeDistance = 0;
+                if(node != (nodesCount -1)){
+                    nodeDistance = weights[row_index][col_index];
+                }
                 
-                //here is where weights is actually used:
-                int row_index = (int)(node / dim);
-                int col_index = node % dim;
-                auto nodeDistance = weights[row_index][col_index];
+                
                 auto totalCostToNode = distances[currentNode] + nodeDistance;
                 LOG("Node " << node << " is neighbour of " << currentNode << " (distance: " << nodeDistance << ", totalCostToNode: " << totalCostToNode << ")");
                 if (totalCostToNode < distances[node]) {

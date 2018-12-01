@@ -12,10 +12,6 @@
 //added for sqrt of vertices count calculation
 #include <math.h>
 
-
-//inititalizes weights to be the correct size; currently creates adjacency matrix. 
-//we can check into adjacency list, or "sparse matrix" representations?? Python has this option, greatly reduces matrix sizes.....
-
 Map::Map(int dim) : weights(dim) {
     for(int i=0; i<dim; ++i) {
         weights[i].resize(dim);
@@ -23,21 +19,17 @@ Map::Map(int dim) : weights(dim) {
 }
 
 
-//basic constructor (i.e. entry constructor) which calls constructor below
-//note; delimiter is set to be a comma by default
 Map Map::fromFile(const std::string& str, const char delimiter) {
     return fromFile(std::ifstream(str.c_str()), delimiter);
 }
 
 
-//This should correctly read in new format now !
 Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
     std::string header;
 
     if (std::getline(istream, header, ':') && header == "vertices" && std::getline(istream, header)) {
         int verticesCount = std::stoi(header);
         int dim = std::sqrt(verticesCount);
-        //calls first constructor, so now weights will have correct sizes
         Map m(dim);        
 
         for(auto i=0; i<dim; ++i) {
@@ -53,7 +45,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
         }
         std::stringstream ss;
 
-        for(auto i=0; i<verticesCount; ++i) {
+        for(auto i=0; i<verticesCount+2; ++i) {
             ss << i;
             std::string nodeName = ss.str();
             ss.str(std::string());
