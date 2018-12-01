@@ -59,17 +59,11 @@ auto isNeighbour(auto currentNode, auto node, auto dim){
     
     //first: check if currentNode == 0 (global source node):
     if(currentNode == 0){
-        int j_to = (node-1) % dim;
-        if(j_to == 0)
-            return true;
-        return false;
+        return ((node-1) % dim) == 0;
     }
     //second: check if "to" node == nodeCount:
     if(node == sourceNode){
-       int j_curr = (currentNode-1) % dim;
-       if(j_curr == (dim-1))
-           return true;
-        return false;
+       return (currentNode % dim) == 0;
     }
         
     //OTHERWISE:
@@ -319,8 +313,8 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
             if (isNeighbour(currentNode, node, dim)) {
                 
                 //here is where weights is actually used:
-                int row_index = (int)(node / dim);
-                int col_index = node % dim;
+                int row_index = (int)((node-1) / dim);
+                int col_index = (node-1) % dim;
                 auto nodeDistance = 0;
                 if(node != (dim*dim)){
                     nodeDistance = weights[row_index][col_index];
