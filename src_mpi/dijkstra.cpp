@@ -320,6 +320,7 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
                 auto nodeDistance = 0;
                 std::cout << "row index: " << row_index << "  col index: " << col_index << std::endl;
                 if(node != (nodesCount -1)){
+                    std::cout << "---------------------------------------SINK NODE---------------------------------------" << std::endl;
                     nodeDistance = weights[row_index][col_index];
                 }
                 
