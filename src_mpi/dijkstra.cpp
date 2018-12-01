@@ -126,7 +126,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     
     
     while (1) {
-        std::cout << "Sending currNode=" << currentNode << " distance=" << distances[currentNode] << std::endl;
+        //std::cout << "Sending currNode=" << currentNode << " distance=" << distances[currentNode] << std::endl;
         // send current node (starting with initialNode) and its value in distances to all other processors
         int data[2] = {currentNode, distances[currentNode]};
         MPI_Bcast(&data, 2, MPI_INT, mpiRootId, MPI_COMM_WORLD);
@@ -139,7 +139,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
             const auto fromNode = nodeRanges.first;
             const auto toNode = nodeRanges.second;
             MPI_Recv(&distances[fromNode], toNode - fromNode + 1, MPI_INT, mpiNodeId, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            std::cout << "Recv from " << mpiNodeId << std::endl;
+            //std::cout << "Recv from " << mpiNodeId << std::endl;
         }
 
         // test for goal
@@ -241,13 +241,13 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
 
     // real work
     while (1) {
-        std::cout << "~~~~" << std::endl;
+        //std::cout << "~~~~" << std::endl;
         // get currentNode, and path distance from initialNode to currentNode (guaranteed to be shortest path seen so far)
         MPI_Bcast(&data, 2, MPI_INT, mpiRootId, MPI_COMM_WORLD);
 
         int currentNode = data[0];
         distances[currentNode] = data[1];
-        std::cout << "mpiId=" << mpiNodeId << " bcast recv currNode=" << currentNode << " dist=" << distances[currentNode] << std::endl;
+        //std::cout << "mpiId=" << mpiNodeId << " bcast recv currNode=" << currentNode << " dist=" << distances[currentNode] << std::endl;
 
         // goal node not found
         if (currentNode == -1)
@@ -287,6 +287,6 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
             MPI_Send(&prevNodes[fromNode], toNode - fromNode + 1, MPI_INT, mpiRootId, 0, MPI_COMM_WORLD);
             return;
         }
-        std::cout << "======" << std::endl;
+        //std::cout << "======" << std::endl;
     }
 }
