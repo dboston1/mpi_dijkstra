@@ -318,12 +318,10 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
                 int row_index = (int)((node-1) / dim);
                 int col_index = (node-1) % dim;
                 auto nodeDistance = 0;
-                std::cout << "row index: " << row_index << "  col index: " << col_index << std::endl;
+                std::cout << "weights[0][0]: " << weights[0][0] << std::endl;
                 if(node != (nodesCount -1)){
-                    std::cout << "---------------------------------------SINK NODE---------------------------------------" << std::endl;
                     nodeDistance = weights[row_index][col_index];
                 }
-                
                 
                 
                 auto totalCostToNode = distances[currentNode] + nodeDistance;
