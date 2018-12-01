@@ -50,7 +50,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
             ss << i;
             std::string nodeName = ss.str();
             ss.str(std::string());
-            std::cout << "Adding node: " << nodeName << std::endl;
+            //std::cout << "Adding node: " << nodeName << std::endl;
             m.nodesNames.push_back(std::string(nodeName));
         }
         

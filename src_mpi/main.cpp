@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpiNodesCount);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpiNodeId);
-    std::cout << "Hello from " << mpiNodeId << std::endl;
+    std::cout << "Hello from mpi node " << mpiNodeId << std::endl;
 
     if (mpiNodeId == mpiRootId) {
         Map m = Map::fromFile(argv[1]);
@@ -34,8 +34,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Dijkstra search algorithm" << std::endl;
         std::cout << "Starting at node: " << initialNodeName << std::endl;
         std::cout << "Ending at node: " << goalNodeName << std::endl;
-        std::cout << "Consecutive nodes (A, B, ...) weights: " << std::endl;
-        m.printWeights();
+        //std::cout << "Consecutive nodes (A, B, ...) weights: " << std::endl;
+        //m.printWeights();
 
         std::cout << "Searching..." << std::endl;
         dijkstra(m, initialNodeName, goalNodeName, mpiNodesCount);
