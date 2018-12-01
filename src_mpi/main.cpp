@@ -12,8 +12,6 @@ int main(int argc, char* argv[]) {
         std::cout << "Usage: " << argv[0] << " <testcase file>" << std::endl;
         return -1;
     }
-    Map m = Map::fromFile(argv[1]);
-    m.printWeights();
 
     int mpiNodesCount, mpiNodeId;
     const int mpiRootId = 0;
