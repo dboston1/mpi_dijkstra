@@ -54,13 +54,36 @@ std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, in
     //NOTE: this does not currently account for global source / sink nodes !
     
 auto isNeighbour(auto currentNode, auto node, auto dim){
-    //first, find i,j entry of currentNode in weights table
+    
+    int sourceNode = dim*dim;
+    
+    
+    //first: check if currentNode == -1 (global source node):
+    if(currentNode == -1){
+        int j_to = node % dim;
+        if(j_to == 0)
+            return true;
+        return false;
+    }
+    //second: check if "to" node == nodeCount:
+    if(node == sourceNode){
+       int j_curr = currentNode % dim;
+       if(j_curr == (dim-1))
+           return true;
+        return false;
+    }
+        
+    //OTHERWISE:
+        
+    //get weights indices for currentNode and "to" node:
     int i_curr = (int)(currentNode / dim);
     int j_curr = currentNode % dim;
-    
-    //same for node:
     int i_to = (int)(node / dim);
     int j_to = node % dim;
+    
+    
+    
+    
     
     //now, three cases, based on currentNode's position in matrix:
     // if in top row of matrix, i.e. i_curr == 0:
@@ -100,7 +123,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     
     const auto& nodesNames = m.getNodesNames();
     auto nodesCount = nodesNames.size();
-    auto dim = std::sqrt(nodesCount);
+    auto dim = std::sqrt(nodesCount-2);
 
     std::vector<int> distances(nodesCount);
     std::vector<int> prevNodes(nodesCount);
@@ -244,7 +267,7 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
     MPI_Bcast(&data, 3, MPI_INT, 0, MPI_COMM_WORLD);
 
     int nodesCount = data[0];
-    int dim = std::sqrt(nodesCount);
+    int dim = std::sqrt(nodesCount-2);
     int initialNode = data[1];
     int goalNode = data[2];
 
@@ -299,7 +322,16 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
                 //here is where weights is actually used:
                 int row_index = (int)(node / dim);
                 int col_index = node % dim;
-                auto nodeDistance = weights[row_index][col_index];
+                auto nodeDistance;
+                if(node == (dim*dim)){
+                    nodeDistance = 0;
+                }
+                else{
+                    nodeDistance = weights[row_index][col_index];
+                }
+                
+                
+                
                 auto totalCostToNode = distances[currentNode] + nodeDistance;
                 LOG("Node " << node << " is neighbour of " << currentNode << " (distance: " << nodeDistance << ", totalCostToNode: " << totalCostToNode << ")");
                 if (totalCostToNode < distances[node]) {

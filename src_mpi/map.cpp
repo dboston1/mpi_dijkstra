@@ -53,7 +53,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
         }
         std::stringstream ss;
 
-        for(auto i=0; i<verticesCount; ++i) {
+        for(auto i=-1; i<verticesCount+1; ++i) {
             ss << i;
             std::string nodeName = ss.str();
             ss.str(std::string());
