@@ -47,7 +47,7 @@ std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, in
         toNode += restNodes;
     }
 
-    return std::pair<int, int>(fromNode, toNode);
+    return std::pair<int, int>(fromNode-1, toNode-1);
 }
     
 
@@ -287,7 +287,7 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
     //note; this gets the entire table...
     // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     for(auto i=0u; i<dim; ++i) {
-        weights[i].resize(nodesCount);
+        weights[i].resize(dim);
         MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
     }
     // -----------------------------------------------------------------------------------------------------------------------------------------------------//
