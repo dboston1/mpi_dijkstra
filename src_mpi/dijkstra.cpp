@@ -53,7 +53,7 @@ std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, in
 
     //NOTE: this does not currently account for global source / sink nodes !
     
-auto isNeighbor(auto currentNode, auto node, auto dim){
+auto isNeighbour(auto currentNode, auto node, auto dim){
     //first, find i,j entry of currentNode in weights table
     int i_curr = (int)(currentNode / dim);
     int j_curr = currentNode % dim;
