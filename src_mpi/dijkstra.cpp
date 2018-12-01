@@ -58,7 +58,7 @@ auto isNeighbour(auto currentNode, auto node, auto dim){
     //convert to indexes:
     
     //first: check if currentNode == 0 (global source node):
-   if(currentNode == 0 && node == sourceNode){
+   if(currentNode == 0 && node == sourceNode)
        return false;
     if(currentNode == 0){
         return ((node-1) % dim) == 0;
