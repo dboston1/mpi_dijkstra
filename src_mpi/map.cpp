@@ -40,7 +40,8 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
             for(auto j=0; j<dim; ++j) {
                 std::string numstr;
                 std::getline(linestream, numstr, delimiter);
-                m.weights[i][j] = std::stoi(numstr);
+                // 9 - the number because we want to find the LONGEST path, this conversion makes it a shortest paths problem 
+                m.weights[i][j] = 9 - (std::stoi(numstr));
             }
         }
         std::stringstream ss;
@@ -49,7 +50,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
             ss << i;
             std::string nodeName = ss.str();
             ss.str(std::string());
-            std::cout << "Adding node: " << nodeName << std::endl;
+            //std::cout << "Adding node: " << nodeName << std::endl;
             m.nodesNames.push_back(std::string(nodeName));
         }
         
@@ -63,7 +64,7 @@ Map Map::fromFile(std::ifstream&& istream, const char delimiter) {
 void Map::printWeights() const {
     for(auto i=0u; i<getSize(); ++i) {
         for(auto j=0u; j<getSize(); ++j)
-            std::cout << std::setw(4) << weights[i][j] << " ";
+            std::cout << std::setw(4) << (9 - weights[i][j]) << " ";
         std::cout << std::endl;
     }
 }

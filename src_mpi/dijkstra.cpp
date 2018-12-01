@@ -126,7 +126,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     
     
     while (1) {
-        std::cout << "Sending currNode=" << currentNode << " distance=" << distances[currentNode] << std::endl;
+        //std::cout << "Sending currNode=" << currentNode << " distance=" << distances[currentNode] << std::endl;
         // send current node (starting with initialNode) and its value in distances to all other processors
         int data[2] = {currentNode, distances[currentNode]};
         MPI_Bcast(&data, 2, MPI_INT, mpiRootId, MPI_COMM_WORLD);
@@ -139,7 +139,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
             const auto fromNode = nodeRanges.first;
             const auto toNode = nodeRanges.second;
             MPI_Recv(&distances[fromNode], toNode - fromNode + 1, MPI_INT, mpiNodeId, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            std::cout << "Recv from " << mpiNodeId << std::endl;
+            //std::cout << "Recv from " << mpiNodeId << std::endl;
         }
 
         // test for goal
@@ -153,8 +153,8 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
                 MPI_Recv(&prevNodes[fromNode], toNode - fromNode + 1, MPI_INT, mpiNodeId, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
             
-            LOGv(distances);
-            LOGv(prevNodes);
+            //LOGv(distances);
+            //LOGv(prevNodes);
 
             std::vector<int> stack;
             while(currentNode != initialNode) {
@@ -164,8 +164,8 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
                 currentNode = prev;
             }
 
-            LOGv(stack);
-            std::cout << "Total cost: " << distances[goalNode] << std::endl;
+            //LOGv(stack);
+            std::cout << "Maximum Path Sum: " << (9*dim) - distances[goalNode] << std::endl;
             std::cout << "Path: " << nodesNames[currentNode];
 
             for(auto it=stack.rbegin(); it != stack.rend(); ++it) {
@@ -178,7 +178,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
         }
         
         //otherwise, goal has not been found yet:
-        LOG("Visited " << currentNode);
+        //LOG("Visited " << currentNode);
         // mark current node as visited
         visited.insert(currentNode);
 
@@ -198,7 +198,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
         }
         
         currentNode = nextNode;
-        LOG("Next currentNode = " << currentNode);
+        //LOG("Next currentNode = " << currentNode);
 
         if (currentNode == -1) {
             std::cout << "Path not found" << std::endl;
@@ -241,13 +241,13 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
 
     // real work
     while (1) {
-        std::cout << "~~~~" << std::endl;
+        //std::cout << "~~~~" << std::endl;
         // get currentNode, and path distance from initialNode to currentNode (guaranteed to be shortest path seen so far)
         MPI_Bcast(&data, 2, MPI_INT, mpiRootId, MPI_COMM_WORLD);
 
         int currentNode = data[0];
         distances[currentNode] = data[1];
-        std::cout << "mpiId=" << mpiNodeId << " bcast recv currNode=" << currentNode << " dist=" << distances[currentNode] << std::endl;
+        //std::cout << "mpiId=" << mpiNodeId << " bcast recv currNode=" << currentNode << " dist=" << distances[currentNode] << std::endl;
 
         // goal node not found
         if (currentNode == -1)
@@ -255,7 +255,7 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
 
         for (auto node=fromNode; node<=toNode; ++node) {
             if (isVisited(node)) {
-                LOG("Node " << node << " already visited - skipping.");
+                //LOG("Node " << node << " already visited - skipping.");
                 continue;
             }
 
@@ -269,11 +269,11 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
                 
                 
                 auto totalCostToNode = distances[currentNode] + nodeDistance;
-                LOG("Node " << node << " is neighbour of " << currentNode << " (distance: " << nodeDistance << ", totalCostToNode: " << totalCostToNode << ")");
+                //LOG("Node " << node << " is neighbour of " << currentNode << " (distance: " << nodeDistance << ", totalCostToNode: " << totalCostToNode << ")");
                 if (totalCostToNode < distances[node]) {
                     distances[node] = totalCostToNode;
                     prevNodes[node] = currentNode;
-                    LOG("New total cost is less than the old, replacing");
+                    //LOG("New total cost is less than the old, replacing");
                 }
             }
         }
@@ -287,6 +287,6 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
             MPI_Send(&prevNodes[fromNode], toNode - fromNode + 1, MPI_INT, mpiRootId, 0, MPI_COMM_WORLD);
             return;
         }
-        std::cout << "======" << std::endl;
+        //std::cout << "======" << std::endl;
     }
 }
