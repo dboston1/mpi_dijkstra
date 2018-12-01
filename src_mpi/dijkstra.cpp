@@ -164,7 +164,7 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     //This is sending a pointer to each row in the adjacency matrix...
     // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     for(auto i=0u; i<dim; ++i)
-        MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
+        MPI_Bcast((int*)&weights[i][0], dim, MPI_INT, mpiRootId, MPI_COMM_WORLD);
     // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     // set dist from initialNode to initialNode to 0
     distances[initialNode] = 0;
@@ -283,7 +283,7 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
     // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     for(auto i=0u; i<dim; ++i) {
         weights[i].resize(dim);
-        MPI_Bcast((int*)&weights[i][0], nodesCount, MPI_INT, mpiRootId, MPI_COMM_WORLD);
+        MPI_Bcast((int*)&weights[i][0], dim, MPI_INT, mpiRootId, MPI_COMM_WORLD);
     }
     // -----------------------------------------------------------------------------------------------------------------------------------------------------//
     // nodeRanges is the nodes this processor will be checking; uses function at top of file
