@@ -47,27 +47,26 @@ std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, in
         toNode += restNodes;
     }
 
-    return std::pair<int, int>(fromNode-1, toNode-1);
+    return std::pair<int, int>(fromNode, toNode);
 }
     
 
     //NOTE: this does not currently account for global source / sink nodes !
     
 auto isNeighbour(auto currentNode, auto node, auto dim){
+    int sourceNode = dim*dim+1;
+    //convert to indexes:
     
-    int sourceNode = dim*dim;
-    
-    
-    //first: check if currentNode == -1 (global source node):
-    if(currentNode == -1){
-        int j_to = node % dim;
+    //first: check if currentNode == 0 (global source node):
+    if(currentNode == 0){
+        int j_to = (node-1) % dim;
         if(j_to == 0)
             return true;
         return false;
     }
     //second: check if "to" node == nodeCount:
     if(node == sourceNode){
-       int j_curr = currentNode % dim;
+       int j_curr = (currentNode-1) % dim;
        if(j_curr == (dim-1))
            return true;
         return false;
@@ -76,10 +75,10 @@ auto isNeighbour(auto currentNode, auto node, auto dim){
     //OTHERWISE:
         
     //get weights indices for currentNode and "to" node:
-    int i_curr = (int)(currentNode / dim);
-    int j_curr = currentNode % dim;
-    int i_to = (int)(node / dim);
-    int j_to = node % dim;
+    int i_curr = (int)((currentNode-1) / dim);
+    int j_curr = (currentNode-1) % dim;
+    int i_to = (int)((node-1) / dim);
+    int j_to = (node-1) % dim;
     
     
     
@@ -139,17 +138,17 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     // [&] creates lambda function; i.e. capture all variables by reference within scope
     // so, this is essentially saying for nodename (by reference), search for it in nodesNames and return appropriate index of it etc etc
     // note this is very ineffiecient; is there a better way to get an index for a particular node??? could just name the nodes by their index....
-    auto indexOf = [&] (auto nodeName) { return std::stoi(nodeName); };
+    auto indexOf = [&] (auto nodeName) { return std::stoi(nodeName)-1; };
         
     auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
 
 
     // just casts the name of the initialNode to an int
-    auto initialNode = static_cast<int>(indexOf(initialNodeName));
+    auto initialNode = static_cast<int>(0);
     auto currentNode = initialNode;
     
     // not sure why this is different than above with initialNodeName, since it accomplishes the same thing....
-    auto goalNode = indexOf(goalNodeName);
+    auto goalNode = static_cast<int>(std::stoi(goalNodeName));
 
     int workerNodes = mpiNodesCount - 1;
     
