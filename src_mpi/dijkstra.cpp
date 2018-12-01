@@ -82,11 +82,11 @@ auto isNeighbour(auto currentNode, auto node, auto dim){
         if(j_curr == (j_to - 1)){
             //check if it moves up, over, or down:
             if((i_curr == i_to) || (i_curr == (i_to - 1)) || (i_curr == (i_to + 1))){
-                return 0;
+                return true;
             }
         }
     }
-    return -1;
+    return false;
 }  
     
 
