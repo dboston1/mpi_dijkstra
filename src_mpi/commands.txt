@@ -1,0 +1,11 @@
+// to run with hosts file:
+mpirun -np 32 --hostfile hosts --mca btl_tcp_if_include eno1 main goldMine/test100x100.txt
+
+// to run without hosts file:
+mpirun -np 6 main goldMine/test50x50.txt
+
+// to run with valgrind callgrind:
+valgrind --tool=callgrind -v --dump-instr=yes --collect-jumps=yes  --trace-children=yes mpirun -np 2 main goldMine/test50x50.txt
+
+then: kcachegrind &
+

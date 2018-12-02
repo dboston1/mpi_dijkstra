@@ -1,6 +1,6 @@
 #include <iostream>
 #include <mpi.h>
-
+#include <time.h>
 #include "map.h"
 #include "debug.h"
 #include "dijkstra.h"
@@ -8,6 +8,8 @@
 //note; all LOG(x) calls are only defined if compiled with -DDEBUG flax in makefile
 
 int main(int argc, char* argv[]) {
+    time_t start, end;
+    
     if (argc == 1) {
         std::cout << "Usage: " << argv[0] << " <testcase file>" << std::endl;
         return -1;
@@ -24,7 +26,7 @@ int main(int argc, char* argv[]) {
 
     if (mpiNodeId == mpiRootId) {
         Map m = Map::fromFile(argv[1]);
-        
+        time (&start);
         auto n = m.getNodesNames();
         auto initialNodeName = *n.begin();
         auto goalNodeName = *(n.end()-1);
@@ -39,10 +41,14 @@ int main(int argc, char* argv[]) {
 
         std::cout << "Searching..." << std::endl;
         dijkstra(m, initialNodeName, goalNodeName, mpiNodesCount);
+        time(&end);
+        double runT = difftime(end, start);
+        std::cout << "Runtime: " << runT << " seconds" << std::endl;
     }
     else
         dijkstraWorker(mpiNodeId, mpiNodesCount);
-
+    
+    
     MPI_Finalize();
 
     return 0;

@@ -3,7 +3,7 @@
 
 # add -DDEBUG to turn on logging in all: line below (right before "-o main")
 all:
-	mpicxx -ggdb -std=c++1y map.cpp dijkstra.cpp main.cpp -o main
+	mpicxx -g -std=c++1y map.cpp dijkstra.cpp main.cpp -o main
 	
 test0:
 	mpiexec -n 3 ./main testcases/testcase0

@@ -6,7 +6,7 @@
 #include <limits>
 
 #include <mpi.h>
-
+#include <unordered_set>
 #include "debug.h"
 #include "dijkstra.h"
 #include "map.h"
@@ -42,39 +42,22 @@ std::pair<int, int> getMpiWorkerNodeRanges(int nodesCount, int mpiNodesCount, in
     
 auto isNeighbour(auto currentNode, auto node, auto dim){
     int sourceNode = dim*dim+1;
-    if(currentNode == 0 && node == sourceNode)
-       return false;
-    if(currentNode == 0){
-        return ((node-1) % dim) == 0;
+     //check edge cases (from sink, to source, etc)
+     // written this way to increase efficiency (it is called millions of times)
+     if(currentNode == 0 || node == sourceNode){
+        if(currentNode == 0 && node == sourceNode)
+            return false;
+        if(currentNode == 0)
+            return ((node-1) % dim) == 0;
+        if(node == sourceNode)
+            return (currentNode % dim) == 0;
     }
-    if(node == sourceNode){
-       return (currentNode % dim) == 0;
-    }
-
-    int i_curr = (int)((currentNode-1) / dim);
-    int j_curr = (currentNode-1) % dim;
-    int i_to = (int)((node-1) / dim);
-    int j_to = (node-1) % dim;
-
-    if(i_curr == 0){
-        if((i_curr == i_to) || (i_curr == (i_to - 1))){
-            return(j_curr == (j_to -1));
-        }
-    }
-    else if(i_curr == (dim -1)){
-        if((i_curr == i_to) || (i_curr == (i_to + 1))){
-            return(j_curr == (j_to -1));
-        }
-    }
-    else{
-        if(j_curr == (j_to - 1)){
-            if((i_curr == i_to) || (i_curr == (i_to - 1)) || (i_curr == (i_to + 1))){
-                return true;
-            }
-        }
-    }
-    return false;
-}  
+    //if((currentNode + dim + 2) < node)
+       // return false;
+    //move to col to right:
+    currentNode++;
+    return ((currentNode == node) || ((currentNode-dim) == node) || ((currentNode+dim) == node));
+}
     
 
 //only the "main" processer (id == 0) uses this function
@@ -86,10 +69,13 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
     auto nodesCount = nodesNames.size();
     auto dim = std::sqrt(nodesCount-2);
 
+    
+    //could make both of these hashmaps; then only broadcast pairs that have a non-infinity val? i.e. first send number of nodes that changed,
+    // then the pairs of changes?
     std::vector<int> distances(nodesCount);
     std::vector<int> prevNodes(nodesCount);
 
-    std::set<int> visited;
+    std::unordered_set<int> visited;
     
     // 0u is an unsigned short; has range [0, 65k] so should be fine for nodesCount <= 65k
     for(auto node=0u; node<nodesCount; ++node) {
@@ -97,10 +83,9 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
         prevNodes[node] = INF;
     }
 
-    auto indexOf = [&] (auto nodeName) { return std::stoi(nodeName)-1; };
+    //auto indexOf = [&] (auto nodeName) { return std::stoi(nodeName)-1; };
         
-    auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
-
+    auto isVisited = [&] (auto node) { return visited.count(node) != 0; };
     auto initialNode = static_cast<int>(0);
     auto currentNode = initialNode;
     auto goalNode = static_cast<int>(std::stoi(goalNodeName));
@@ -190,7 +175,9 @@ void dijkstra(const Map& m, const std::string& initialNodeName, const std::strin
         // as next node. If none exists, it will remain -1 at end, at which point program will exit after printing "Path not Found"
         for(auto node=0u; node<nodesCount; ++node) {
             auto totalCost = distances[node];
-
+            if(totalCost == INF){
+                continue;
+            }
             if (!isVisited(node) && totalCost < minCost) {
                 minCost = totalCost;
                 nextNode = node;
@@ -224,9 +211,9 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
     std::vector<std::vector<int>> weights(nodesCount);
     std::vector<int> distances(nodesCount, INF);
     std::vector<int> prevNodes(nodesCount, INF);
-    std::set<int> visited;
+    std::unordered_set<int> visited;
 
-    auto isVisited = [&] (auto node) { return visited.find(node) != visited.end(); };
+    auto isVisited = [&] (auto node) { return visited.count(node) != 0; };
     
     //populate weights from host broadcast 
     for(auto i=0u; i<dim; ++i) {
@@ -252,14 +239,30 @@ void dijkstraWorker(int mpiNodeId, int mpiNodesCount) {
         // goal node not found
         if (currentNode == -1)
             return;
-
+        
+        //TWO PROBLEMS HERE:
+        // One:
+        //      isNeighbor will return false for all MPI workers where currentNode is outside of their range of nodes...
+        //      this creates a lot of duplicate MPI communication as well...
+        //      instead, since we know which nodes are "neighbors" to currentN
+        
+        // Two: 
+        
+        
+        
+        
+        /// we can get rid of this, since this for-loop just checks which nodes are adjacent
+        /// instead, just update the nodes if adjacent to it
+        /// need to check for edge cases (top row, bottom row, sink / source nodes)
+        
         for (auto node=fromNode; node<=toNode; ++node) {
-            if (isVisited(node)) {
-                //LOG("Node " << node << " already visited - skipping.");
-                continue;
-            }
-
+            
+            
             if (isNeighbour(currentNode, node, dim)) {
+                if (isVisited(node)) {
+                //LOG("Node " << node << " already visited - skipping.");
+                   continue;
+               }
                 int row_index = (int)((node-1) / dim);
                 int col_index = (node-1) % dim;
                 auto nodeDistance = 0;
